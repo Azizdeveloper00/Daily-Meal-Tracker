@@ -14,6 +14,7 @@ export default function Header({
   theme,
   onToggleTheme,
   onLogout,
+  name,
 }) {
   const percent = Math.round((completedCount / totalMeals) * 100);
 
@@ -41,7 +42,10 @@ export default function Header({
       </div>
 
       <p className="hero__date">{formatLongDate(now)}</p>
-      <p className="hero__greeting">{getGreeting(now)}</p>
+      <p className="hero__greeting">
+        {getGreeting(now)}
+        {name ? `, ${name}` : ''}
+      </p>
       <p className="hero__note">{getEncouragement(completedCount, totalMeals)}</p>
 
       <div className="progress" aria-live="polite">

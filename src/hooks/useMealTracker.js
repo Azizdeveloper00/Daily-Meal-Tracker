@@ -33,7 +33,13 @@ function withoutMeal(records, dateKey, mealId) {
 }
 
 function settingsPayload(state) {
-  return { schedule: state.schedule, theme: state.theme };
+  return {
+    schedule: state.schedule,
+    theme: state.theme,
+    name: state.name,
+    remindersEnabled: state.remindersEnabled,
+    reminderMinutes: state.reminderMinutes,
+  };
 }
 
 function mergeLocalEdits(serverState, cachedState, currentState) {
@@ -64,6 +70,15 @@ function mergeLocalEdits(serverState, cachedState, currentState) {
   return {
     records,
     schedule,
+    name: currentState.name === cachedState.name ? serverState.name : currentState.name,
+    remindersEnabled:
+      currentState.remindersEnabled === cachedState.remindersEnabled
+        ? serverState.remindersEnabled
+        : currentState.remindersEnabled,
+    reminderMinutes:
+      currentState.reminderMinutes === cachedState.reminderMinutes
+        ? serverState.reminderMinutes
+        : currentState.reminderMinutes,
     theme:
       currentState.theme === cachedState.theme ? serverState.theme : currentState.theme,
   };
@@ -72,6 +87,7 @@ function mergeLocalEdits(serverState, cachedState, currentState) {
 /** Owns all persisted data: meal records by date, schedule, and theme. */
 export function useMealTracker(onError = () => {}) {
   const [state, setState] = useState(loadState);
+  const [isReady, setIsReady] = useState(false);
   const stateRef = useRef(state);
   const revisionRef = useRef(0);
   const onErrorRef = useRef(onError);
@@ -126,6 +142,9 @@ export function useMealTracker(onError = () => {}) {
           settings = {
             schedule: cachedState.schedule,
             theme: cachedState.theme,
+            name: cachedState.name,
+            remindersEnabled: cachedState.remindersEnabled,
+            reminderMinutes: cachedState.reminderMinutes,
           };
           await saveSettings(settings);
         }
@@ -133,6 +152,9 @@ export function useMealTracker(onError = () => {}) {
           records,
           schedule: settings.schedule,
           theme: settings.theme,
+          name: settings.name ?? '',
+          remindersEnabled: settings.remindersEnabled ?? true,
+          reminderMinutes: settings.reminderMinutes ?? 30,
         };
         if (revisionRef.current === 0) {
           updateState(serverState);
@@ -141,7 +163,9 @@ export function useMealTracker(onError = () => {}) {
             mergeLocalEdits(serverState, cachedState, stateRef.current),
           );
         }
+        setIsReady(true);
       } catch (error) {
+        setIsReady(true);
         onErrorRef.current(`Could not reach the server. Using saved data offline. ${error.message}`);
       }
     })();
@@ -310,13 +334,80 @@ export function useMealTracker(onError = () => {}) {
     );
   }, [runRequest, updateState]);
 
+  const setName = useCallback((rawName) => {
+    if (typeof rawName !== 'string') return;
+    const name = rawName.trim();
+    if (name.length > 30) return;
+    const previous = stateRef.current;
+    if (previous.name === name) return;
+    updateState({ ...previous, name });
+    void runRequest(
+      async () => {
+        await initializationRef.current;
+        await saveSettings(settingsPayload(stateRef.current));
+      },
+      () => {
+        const current = stateRef.current;
+        if (current.name === name) updateState({ ...current, name: previous.name });
+      },
+      'Could not save your name',
+    );
+  }, [runRequest, updateState]);
+
+  const setRemindersEnabled = useCallback((remindersEnabled) => {
+    if (typeof remindersEnabled !== 'boolean') return;
+    const previous = stateRef.current;
+    if (previous.remindersEnabled === remindersEnabled) return;
+    updateState({ ...previous, remindersEnabled });
+    void runRequest(
+      async () => {
+        await initializationRef.current;
+        await saveSettings(settingsPayload(stateRef.current));
+      },
+      () => {
+        const current = stateRef.current;
+        if (current.remindersEnabled === remindersEnabled) {
+          updateState({ ...current, remindersEnabled: previous.remindersEnabled });
+        }
+      },
+      'Could not save reminder setting',
+    );
+  }, [runRequest, updateState]);
+
+  const setReminderMinutes = useCallback((rawMinutes) => {
+    const reminderMinutes = Number(rawMinutes);
+    if (!Number.isInteger(reminderMinutes) || reminderMinutes < 5 || reminderMinutes > 120) {
+      return;
+    }
+    const previous = stateRef.current;
+    if (previous.reminderMinutes === reminderMinutes) return;
+    updateState({ ...previous, reminderMinutes });
+    void runRequest(
+      async () => {
+        await initializationRef.current;
+        await saveSettings(settingsPayload(stateRef.current));
+      },
+      () => {
+        const current = stateRef.current;
+        if (current.reminderMinutes === reminderMinutes) {
+          updateState({ ...current, reminderMinutes: previous.reminderMinutes });
+        }
+      },
+      'Could not save reminder interval',
+    );
+  }, [runRequest, updateState]);
+
   return {
     state,
+    isReady,
     completeMeal,
     undoMeal,
     clearToday,
     setScheduleTime,
     resetSchedule,
     setTheme,
+    setName,
+    setRemindersEnabled,
+    setReminderMinutes,
   };
 }

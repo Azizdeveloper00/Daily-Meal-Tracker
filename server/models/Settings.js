@@ -10,6 +10,9 @@ const settingsSchema = new mongoose.Schema(
       dinner: { type: String, required: true, match: timePattern },
     },
     theme: { type: String, enum: ['light', 'dark', null], default: null },
+    name: { type: String, trim: true, maxlength: 30, default: '' },
+    remindersEnabled: { type: Boolean, default: true },
+    reminderMinutes: { type: Number, min: 5, max: 120, default: 30 },
   },
   { versionKey: false },
 );

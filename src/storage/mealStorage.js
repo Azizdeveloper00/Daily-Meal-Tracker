@@ -3,6 +3,7 @@ import { isValidDateKey } from '../utils/date';
 
 export const STORAGE_KEY = 'daily-meal-tracker:v1';
 export const MIGRATION_KEY = 'daily-meal-tracker:migrated-to-api:v1';
+export const REMINDER_STORAGE_KEY = 'daily-meal-tracker:reminders:v1';
 
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -40,8 +41,35 @@ function sanitizeSchedule(raw) {
   return schedule;
 }
 
+function sanitizeReminderHistory(raw) {
+  const history = {};
+  if (!isPlainObject(raw)) return history;
+
+  for (const [dateKey, dateHistory] of Object.entries(raw)) {
+    if (!isValidDateKey(dateKey) || !isPlainObject(dateHistory)) continue;
+    const cleanDate = {};
+    for (const mealId of MEAL_IDS) {
+      const mealHistory = dateHistory[mealId];
+      if (!isPlainObject(mealHistory)) continue;
+      const cleanMeal = {};
+      if (mealHistory.before === true) cleanMeal.before = true;
+      if (mealHistory.due === true) cleanMeal.due = true;
+      if (Object.keys(cleanMeal).length) cleanDate[mealId] = cleanMeal;
+    }
+    if (Object.keys(cleanDate).length) history[dateKey] = cleanDate;
+  }
+  return history;
+}
+
 export function getDefaultState() {
-  return { records: {}, schedule: { ...DEFAULT_SCHEDULE }, theme: null };
+  return {
+    records: {},
+    schedule: { ...DEFAULT_SCHEDULE },
+    theme: null,
+    name: '',
+    remindersEnabled: true,
+    reminderMinutes: 30,
+  };
 }
 
 export function loadState() {
@@ -53,10 +81,32 @@ export function loadState() {
       records: sanitizeRecords(raw.records),
       schedule: sanitizeSchedule(raw.schedule),
       theme: raw.theme === 'dark' || raw.theme === 'light' ? raw.theme : null,
+      name: typeof raw.name === 'string' ? raw.name.trim().slice(0, 30) : '',
+      remindersEnabled: typeof raw.remindersEnabled === 'boolean' ? raw.remindersEnabled : true,
+      reminderMinutes:
+        Number.isInteger(raw.reminderMinutes) && raw.reminderMinutes >= 5 && raw.reminderMinutes <= 120
+          ? raw.reminderMinutes
+          : 30,
     };
   } catch {
     // Corrupt JSON or storage unavailable (private mode): start fresh.
     return getDefaultState();
+  }
+}
+
+export function loadReminderHistory() {
+  try {
+    return sanitizeReminderHistory(JSON.parse(localStorage.getItem(REMINDER_STORAGE_KEY)));
+  } catch {
+    return {};
+  }
+}
+
+export function saveReminderHistory(history) {
+  try {
+    localStorage.setItem(REMINDER_STORAGE_KEY, JSON.stringify(history));
+  } catch {
+    // Reminder history is best-effort when browser storage is unavailable.
   }
 }
 

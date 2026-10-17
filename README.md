@@ -41,6 +41,12 @@ Required environment variables:
 
 `PORT` is optional locally (defaults to `5000`) and is assigned by Render in production. The login session cookie is httpOnly, secure in production, and expires after seven days. API endpoints require a valid login session.
 
+## App features
+
+- Meal reminders are enabled by default and trigger 30 minutes before a meal and again when its scheduled time arrives, unless that meal is already completed. Change the lead time from 5 to 120 minutes or disable reminders in Settings. Browser notifications are optional; the app also shows in-app reminder banners. Notifications require browser permission, and reminders run while the app is open in a tab or installed PWA.
+- Set a name in Settings to personalize the greeting, reminders, and meal appreciation messages. The name, reminder toggle, and lead time are saved with schedule and theme in MongoDB and the browser cache.
+- The Calendar shows completion counts, month totals, perfect days, and selected-day completion times. Its monthly completion percentage counts elapsed days only for the current month, excluding future dates.
+
 ## Data and migration
 
 Completion times are stored as ISO timestamps and displayed in the user's local time. The frontend sends local `YYYY-MM-DD` keys to the API, so the server does not decide which day is current.

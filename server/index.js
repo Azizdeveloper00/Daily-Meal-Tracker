@@ -23,11 +23,27 @@ const distDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)),
 const meals = ['breakfast', 'lunch', 'dinner'];
 const defaultSchedule = { breakfast: '09:00', lunch: '14:00', dinner: '21:00' };
 const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
+const defaultReminderMinutes = 30;
 const isoDateTimePattern =
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
 
 if (isProduction) app.set('trust proxy', 1);
-app.use(helmet());
+const {
+  'style-src': _defaultStyleSrc,
+  'font-src': _defaultFontSrc,
+  ...defaultCspDirectives
+} = helmet.contentSecurityPolicy.getDefaultDirectives();
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        ...defaultCspDirectives,
+        'style-src': ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+        'font-src': ["'self'", 'https://fonts.gstatic.com'],
+      },
+    },
+  }),
+);
 app.use((request, response, next) => {
   const origin = request.get('Origin');
   if (!origin) return next();
@@ -228,6 +244,9 @@ app.get(
     response.json({
       schedule: settings?.schedule ?? defaultSchedule,
       theme: settings?.theme ?? null,
+      name: settings?.name ?? '',
+      remindersEnabled: settings?.remindersEnabled ?? true,
+      reminderMinutes: settings?.reminderMinutes ?? defaultReminderMinutes,
       configured: Boolean(settings),
     });
   }),
@@ -236,7 +255,13 @@ app.get(
 app.put(
   '/api/settings',
   asyncHandler(async (request, response) => {
-    const { schedule, theme } = request.body ?? {};
+    const {
+      schedule,
+      theme,
+      name = '',
+      remindersEnabled = true,
+      reminderMinutes = defaultReminderMinutes,
+    } = request.body ?? {};
     if (
       !schedule ||
       typeof schedule !== 'object' ||
@@ -252,13 +277,36 @@ app.put(
       response.status(400).json({ error: 'theme must be light, dark, or null.' });
       return;
     }
+    if (typeof name !== 'string' || name.trim().length > 30) {
+      response.status(400).json({ error: 'name must be a string of 0 to 30 characters.' });
+      return;
+    }
+    if (typeof remindersEnabled !== 'boolean') {
+      response.status(400).json({ error: 'remindersEnabled must be true or false.' });
+      return;
+    }
+    if (
+      !Number.isInteger(reminderMinutes) ||
+      reminderMinutes < 5 ||
+      reminderMinutes > 120
+    ) {
+      response.status(400).json({ error: 'reminderMinutes must be an integer from 5 to 120.' });
+      return;
+    }
 
     const settings = await Settings.findByIdAndUpdate(
       'default',
-      { $set: { schedule, theme } },
+      { $set: { schedule, theme, name: name.trim(), remindersEnabled, reminderMinutes } },
       { upsert: true, new: true, runValidators: true, setDefaultsOnInsert: true },
     ).lean();
-    response.json({ schedule: settings.schedule, theme: settings.theme, configured: true });
+    response.json({
+      schedule: settings.schedule,
+      theme: settings.theme,
+      name: settings.name,
+      remindersEnabled: settings.remindersEnabled,
+      reminderMinutes: settings.reminderMinutes,
+      configured: true,
+    });
   }),
 );
 

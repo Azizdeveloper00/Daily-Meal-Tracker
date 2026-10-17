@@ -19,6 +19,8 @@
   --danger-soft: #f6e9e5;
   --shadow: 0 1px 2px rgba(60, 50, 30, 0.05), 0 8px 24px rgba(60, 50, 30, 0.05);
   --overlay: rgba(32, 30, 24, 0.38);
+  --calendar-medium: #a8c1b0;
+  --calendar-full: #6b8a77;
 }
 
 [data-theme='dark'] {
@@ -37,6 +39,8 @@
   --danger-soft: #3a2b27;
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.2);
   --overlay: rgba(0, 0, 0, 0.55);
+  --calendar-medium: #516c5b;
+  --calendar-full: #8aab97;
 }
 
 *,
@@ -646,6 +650,231 @@ input {
   padding: 10px 0;
   border-bottom: 1px solid var(--border);
   font-weight: 500;
+}
+
+.settings-row input[type='checkbox'] {
+  width: 20px;
+  min-height: 20px;
+  accent-color: var(--sage);
+}
+
+.settings-subsection {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.settings-subsection__title {
+  margin-bottom: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.settings-number {
+  width: 88px;
+}
+
+.settings-row--reminder {
+  justify-content: flex-start;
+}
+
+.settings-row--reminder input {
+  width: 76px;
+  min-width: 76px;
+}
+
+.settings-notification {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.settings-note {
+  margin-top: 12px;
+  margin-bottom: 0;
+}
+
+.settings-name {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.settings-name input {
+  flex: 1;
+  min-width: 0;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+/* ---------- Calendar ---------- */
+
+.calendar-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.calendar-nav__month {
+  flex: 1;
+  text-align: center;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.calendar-weekday {
+  padding: 4px 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.calendar-day,
+.calendar-blank {
+  min-width: 0;
+  min-height: 62px;
+  border-radius: var(--radius-sm);
+}
+
+.calendar-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 4px 1px;
+  border: 1px solid transparent;
+  background: var(--surface-2);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.calendar-day--1 {
+  background: var(--sage-soft);
+}
+
+.calendar-day--2 {
+  background: var(--calendar-medium);
+}
+
+.calendar-day--3 {
+  background: var(--calendar-full);
+  color: var(--on-sage);
+}
+
+.calendar-day.is-today {
+  border-color: var(--text);
+}
+
+.calendar-day.is-selected {
+  outline: 2px solid var(--sage);
+  outline-offset: 1px;
+}
+
+.calendar-day.is-future {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.calendar-day__number {
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.calendar-day__count {
+  font-size: 0.72rem;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.calendar-summary {
+  margin-top: 16px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.calendar-detail {
+  margin-top: 18px;
+  border-top: 1px solid var(--border);
+}
+
+/* ---------- Reminders & appreciation ---------- */
+
+.reminder-region {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 45;
+  display: grid;
+  gap: 8px;
+  width: min(420px, calc(100vw - 32px));
+}
+
+.reminder-banner,
+.appreciation-card {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+
+.reminder-banner {
+  background: var(--sage-soft);
+}
+
+.reminder-banner__close,
+.appreciation-card button {
+  flex: 0 0 auto;
+  padding: 0 2px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.appreciation-region {
+  position: fixed;
+  right: 16px;
+  bottom: 76px;
+  left: 16px;
+  z-index: 39;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.appreciation-card {
+  width: min(460px, 100%);
+  align-items: center;
+  background: var(--sage-soft);
+  pointer-events: auto;
+  animation: rise 0.25s ease;
 }
 
 /* ---------- Dialog & toast ---------- */
