@@ -46,6 +46,16 @@ Required environment variables:
 - Meal reminders are enabled by default and trigger 30 minutes before a meal and again when its scheduled time arrives, unless that meal is already completed. Change the lead time from 5 to 120 minutes or disable reminders in Settings. Browser notifications are optional; the app also shows in-app reminder banners. Notifications require browser permission, and reminders run while the app is open in a tab or installed PWA.
 - Set a name in Settings to personalize the greeting, reminders, and meal appreciation messages. The name, reminder toggle, and lead time are saved with schedule and theme in MongoDB and the browser cache.
 - The Calendar shows completion counts, month totals, perfect days, and selected-day completion times. Its monthly completion percentage counts elapsed days only for the current month, excluding future dates.
+- The app can be installed as a PWA on supported browsers. Its app shell and static resources are cached for basic offline opening; tracker data remains in the existing LocalStorage cache. API requests are never cached. An offline session can display cached data after a successful login on that device; edits still need the server and retain the app's normal rollback behavior when requests fail.
+
+## Install and test the PWA
+
+1. Deploy the app over HTTPS (or use `localhost` for local testing) and open it in a supported browser.
+2. Use the browser's **Install app** prompt from Settings, or its install option in the address bar/menu. On iOS Safari, tap **Share**, then **Add to Home Screen**.
+3. To test offline use, sign in while online, open the app once to allow its service worker to cache the shell, then use browser developer tools to set the network to **Offline** and reload. The app shell and LocalStorage data should open; API changes cannot sync until the connection returns.
+4. For a Lighthouse PWA check, open Chrome DevTools → **Lighthouse**, select **Progressive Web App**, and run the report against the deployed HTTPS URL (or localhost).
+
+The service worker caches the current HTML network-first and pre-caches the generated JavaScript, CSS, icons, and available Google Font assets. It never caches `/api`, authentication endpoints, or responses carrying `Set-Cookie`. When an updated worker is ready, use its **Refresh** button at a convenient time; the app does not reload automatically. Change the `CACHE_NAME` version in `public/sw.js` when intentionally starting a fresh app-shell cache. The icon PNG files are generated from `public/icons/meal-tracker-icon.svg`.
 
 ## Data and migration
 

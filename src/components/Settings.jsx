@@ -1,9 +1,16 @@
 import { useEffect, useState } from 'react';
 import { RotateCcw } from 'lucide-react';
 import { MEALS } from '../data/meals';
+import { hasInstallPrompt, promptInstall, subscribeInstallPrompt } from '../pwa/installPrompt';
 
 function currentNotificationPermission() {
   return typeof Notification === 'undefined' ? 'unavailable' : Notification.permission;
+}
+
+function isIosSafari() {
+  const userAgent = navigator.userAgent;
+  const isIos = /iPhone|iPad|iPod/.test(userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  return isIos && !/CriOS|FxiOS|EdgiOS|OPiOS/.test(userAgent);
 }
 
 export default function Settings({
@@ -20,9 +27,23 @@ export default function Settings({
   const [nameDraft, setNameDraft] = useState(name);
   const [minutesDraft, setMinutesDraft] = useState(String(reminderMinutes));
   const [permission, setPermission] = useState(currentNotificationPermission);
+  const [canInstall, setCanInstall] = useState(hasInstallPrompt);
+  const [isInstalled, setIsInstalled] = useState(
+    window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true,
+  );
+  const showIosInstallHint = !isInstalled && isIosSafari() && !canInstall;
 
   useEffect(() => setNameDraft(name), [name]);
   useEffect(() => setMinutesDraft(String(reminderMinutes)), [reminderMinutes]);
+  useEffect(() => {
+    const unsubscribe = subscribeInstallPrompt(setCanInstall);
+    const updateInstalled = () => setIsInstalled(true);
+    window.addEventListener('appinstalled', updateInstalled);
+    return () => {
+      unsubscribe();
+      window.removeEventListener('appinstalled', updateInstalled);
+    };
+  }, []);
 
   const requestNotificationPermission = async () => {
     if (typeof Notification === 'undefined') {
@@ -76,6 +97,20 @@ export default function Settings({
 
         <div className="settings-subsection">
           <h3 className="settings-subsection__title">Meal reminders</h3>
+          {!isInstalled && canInstall && (
+            <button
+              type="button"
+              className="button button--small settings-install"
+              onClick={() => void promptInstall()}
+            >
+              Install app
+            </button>
+          )}
+          {showIosInstallHint && (
+            <p className="panel__intro settings-note">
+              Tap Share, then Add to Home Screen.
+            </p>
+          )}
           <label className="settings-row">
             <span>Meal reminders</span>
             <input

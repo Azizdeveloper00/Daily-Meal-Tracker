@@ -324,6 +324,19 @@ async function startServer() {
   await mongoose.connect(process.env.MONGODB_URI);
   await MealRecord.init();
   if (isProduction) {
+    app.get('/manifest.webmanifest', (_request, response, next) => {
+      response.type('application/manifest+json');
+      response.sendFile(path.join(distDirectory, 'manifest.webmanifest'), (error) => {
+        if (error) next(error);
+      });
+    });
+    app.get('/sw.js', (_request, response, next) => {
+      response.type('application/javascript');
+      response.set('Cache-Control', 'no-cache');
+      response.sendFile(path.join(distDirectory, 'sw.js'), (error) => {
+        if (error) next(error);
+      });
+    });
     app.use(express.static(distDirectory));
     app.get('*', (request, response, next) => {
       if (request.path === '/api' || request.path.startsWith('/api/')) {

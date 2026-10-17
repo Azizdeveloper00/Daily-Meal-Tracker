@@ -133,10 +133,26 @@ export default function App({ onLogout }) {
       newMessages.push({ id, message });
 
       if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-        try {
-          new Notification('Daily Meal Tracker', { body: message });
-        } catch {
-          // The in-app reminder remains visible when a browser blocks notifications.
+        const notificationOptions = { body: message, icon: '/icons/icon-192.png' };
+        const showFallbackNotification = () => {
+          try {
+            new Notification('Daily Meal Tracker', notificationOptions);
+          } catch {
+            // The in-app reminder remains visible when system notifications are unavailable.
+          }
+        };
+        if ('serviceWorker' in navigator) {
+          void navigator.serviceWorker
+            .getRegistration()
+            .then((registration) => {
+              if (registration?.showNotification) {
+                return registration.showNotification('Daily Meal Tracker', notificationOptions);
+              }
+              showFallbackNotification();
+            })
+            .catch(showFallbackNotification);
+        } else {
+          showFallbackNotification();
         }
       }
     }

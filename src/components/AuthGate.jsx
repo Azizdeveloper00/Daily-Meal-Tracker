@@ -2,6 +2,25 @@ import { cloneElement, isValidElement, useCallback, useEffect, useState } from '
 import { getAuthSession, logIn, logOut } from '../api/authApi';
 import Login from './Login';
 
+const OFFLINE_SESSION_KEY = 'daily-meal-tracker:offline-session';
+
+function hasOfflineSession() {
+  try {
+    return localStorage.getItem(OFFLINE_SESSION_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function saveOfflineSession(authenticated) {
+  try {
+    if (authenticated) localStorage.setItem(OFFLINE_SESSION_KEY, 'true');
+    else localStorage.removeItem(OFFLINE_SESSION_KEY);
+  } catch {
+    // Offline access is optional when browser storage is unavailable.
+  }
+}
+
 export default function AuthGate({ children }) {
   const [authenticated, setAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -14,8 +33,12 @@ export default function AuthGate({ children }) {
     try {
       const session = await getAuthSession();
       setAuthenticated(session.authenticated);
+      saveOfflineSession(session.authenticated);
     } catch (requestError) {
-      setError(`Could not connect to the app. ${requestError.message}`);
+      const canOpenOffline =
+        !navigator.onLine && hasOfflineSession();
+      setAuthenticated(canOpenOffline);
+      if (!canOpenOffline) setError(`Could not connect to the app. ${requestError.message}`);
     } finally {
       setLoading(false);
     }
@@ -25,11 +48,26 @@ export default function AuthGate({ children }) {
     void checkSession();
   }, [checkSession]);
 
+  useEffect(() => {
+    const handleOnline = async () => {
+      try {
+        const session = await getAuthSession();
+        setAuthenticated(session.authenticated);
+        if (!session.authenticated) saveOfflineSession(false);
+      } catch {
+        // Keep an already-open offline session until the API can be reached.
+      }
+    };
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
+  }, []);
+
   const handleLogin = async (password) => {
     setBusy(true);
     setError('');
     try {
       await logIn(password);
+      saveOfflineSession(true);
       setAuthenticated(true);
     } catch (requestError) {
       setError(requestError.message);
@@ -41,6 +79,7 @@ export default function AuthGate({ children }) {
   const handleLogout = async () => {
     try {
       await logOut();
+      saveOfflineSession(false);
       setAuthenticated(false);
       return '';
     } catch (requestError) {
